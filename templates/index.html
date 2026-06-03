@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Network Intrusion Detector</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+<div class="app">
+
+  <div class="header">
+    <h1>⬡ Network Intrusion Detector</h1>
+    <p>IBM Watson ML · CSV Batch Prediction</p>
+  </div>
+
+  <div class="card">
+    <form action="/predict" method="POST" enctype="multipart/form-data">
+
+      <label>Upload CSV File</label>
+      <input type="file" name="file" accept=".csv" required>
+
+      <button type="submit">Run Prediction</button>
+
+    </form>
+  </div>
+
+  {% if results %}
+
+  <div class="card">
+    <h3>Prediction Results</h3>
+
+    <table>
+      <tr>
+        <th>#</th>
+        <th>Label</th>
+        <th>Confidence</th>
+        <th>Protocol</th>
+        <th>Service</th>
+        <th>Src Bytes</th>
+      </tr>
+
+      {% for r in results %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td class="{{ 'normal' if r.label == 'normal' else 'attack' }}">
+          {{ r.label }}
+        </td>
+        <td>{{ r.confidence }}</td>
+        <td>{{ r.protocol_type }}</td>
+        <td>{{ r.service }}</td>
+        <td>{{ r.src_bytes }}</td>
+      </tr>
+      {% endfor %}
+
+    </table>
+  </div>
+
+  {% endif %}
+
+</div>
+</body>
+</html>

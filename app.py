@@ -1,22 +1,26 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, send_file
 import pandas as pd
 import requests
 import os
 from dotenv import load_dotenv
+import io
+import time
 
 load_dotenv()
 
 app = Flask(__name__)
 
 # =========================
-# IBM CONFIG (KEEP SECRET)
+# IBM CONFIG
 # =========================
 IBM_API_KEY = os.getenv("IBM_API_KEY")
 
 DEPLOYMENT_URL = "https://au-syd.ml.cloud.ibm.com/ml/v4/deployments/019e8d4a-cf53-75c1-b5e3-84c0ea576d8d/predictions?version=2021-05-01"
 
+predicted_df = None
+
 # =========================
-# 41 FEATURES (KDD DATASET)
+# 41 FEATURES
 # =========================
 FIELDS = [
     "duration","protocol_type","service","flag","src_bytes","dst_bytes",
@@ -33,7 +37,7 @@ FIELDS = [
 ]
 
 # =========================
-# GET IBM TOKEN
+# TOKEN
 # =========================
 def get_token():
     url = "https://iam.cloud.ibm.com/identity/token"
@@ -44,79 +48,112 @@ def get_token():
             "grant_type": "urn:ibm:params:oauth:grant-type:apikey",
             "apikey": IBM_API_KEY
         },
-        headers={"Content-Type": "application/x-www-form-urlencoded"}
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        timeout=30
     )
 
     data = response.json()
 
     if "access_token" not in data:
-        raise Exception(f"IBM Auth Failed: {data}")
+        return None
 
     return data["access_token"]
 
 # =========================
-# HOME PAGE
+# HOME
 # =========================
 @app.route("/")
 def home():
     return render_template("index.html")
 
 # =========================
-# PREDICTION ROUTE
+# PREDICT
 # =========================
 @app.route("/predict", methods=["POST"])
 def predict():
-    try:
-        file = request.files["file"]
-        df = pd.read_csv(file)
+    global predicted_df
 
-        token = get_token()
+    file = request.files.get("file")
+    if not file:
+        return "No file uploaded"
 
-        # Ensure correct columns exist
-        missing = [c for c in FIELDS if c not in df.columns]
-        if missing:
-            return f"Missing columns: {missing}"
+    df = pd.read_csv(file)
 
-        df = df[FIELDS]
+    missing = [c for c in FIELDS if c not in df.columns]
+    if missing:
+        return f"Missing columns: {missing}"
 
-        payload = {
-            "input_data": [{
-                "fields": FIELDS,
-                "values": df.values.tolist()
-            }]
-        }
+    df = df[FIELDS]
 
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json"
-        }
+    # 🔥 SIMULATE LOADING (for popup UI)
+    time.sleep(3)   # you can increase to 40 if needed
 
-        response = requests.post(DEPLOYMENT_URL, json=payload, headers=headers, timeout=60)
+    token = get_token()
+    if not token:
+        return "IBM Auth Failed"
 
-        result = response.json()
+    payload = {
+        "input_data": [{
+            "fields": FIELDS,
+            "values": df.values.tolist()
+        }]
+    }
 
-        if "predictions" not in result:
-            return f"IBM Error: {result}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
 
-        predictions = result["predictions"][0]["values"]
+    response = requests.post(DEPLOYMENT_URL, json=payload, headers=headers, timeout=120)
 
-        results = []
-        for i, row in enumerate(predictions):
-            results.append({
-                "label": row[0],
-                "confidence": row[1] if len(row) > 1 else "N/A",
-                "protocol_type": df.iloc[i]["protocol_type"],
-                "service": df.iloc[i]["service"],
-                "src_bytes": df.iloc[i]["src_bytes"]
-            })
+    result = response.json()
 
-        return render_template("index.html", results=results)
+    if "predictions" not in result:
+        return str(result)
 
-    except Exception as e:
-        return f"Server Error: {str(e)}"
+    predictions = result["predictions"][0]["values"]
+
+    labels = []
+    confidences = []
+
+    for p in predictions:
+        labels.append(str(p[0]).strip().lower())
+        confidences.append(p[1] if len(p) > 1 else 0)
+
+    df["label"] = labels
+    df["confidence"] = confidences
+
+    predicted_df = df
+
+    results = df.to_dict(orient="records")
+
+    return render_template(
+        "index.html",
+        results=results,
+        download_ready=True
+    )
 
 # =========================
-# RUN APP
+# DOWNLOAD
+# =========================
+@app.route("/download")
+def download():
+    global predicted_df
+
+    if predicted_df is None:
+        return "No data"
+
+    output = io.StringIO()
+    predicted_df.to_csv(output, index=False)
+    output.seek(0)
+
+    return send_file(
+        io.BytesIO(output.getvalue().encode()),
+        mimetype="text/csv",
+        as_attachment=True,
+        download_name="predicted.csv"
+    )
+
 # =========================
 if __name__ == "__main__":
     app.run(debug=True)

@@ -1,90 +1,51 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
 body {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: Arial;
   background: #0a0d14;
-  color: #e2e8f0;
+  color: white;
 }
 
 .app {
-  max-width: 900px;
+  width: 80%;
   margin: auto;
-  padding: 2rem;
-}
-
-.header h1 {
-  color: #38bdf8;
-  font-family: 'Syne', sans-serif;
-}
-
-.header p {
-  color: #64748b;
-  font-size: 13px;
 }
 
 .card {
   background: #111827;
-  border: 1px solid #1e293b;
+  padding: 20px;
+  margin-top: 20px;
   border-radius: 10px;
-  padding: 1.2rem;
-  margin-top: 1.5rem;
 }
 
-input[type="file"] {
+table {
   width: 100%;
   margin-top: 10px;
+  border-collapse: collapse;
+}
+
+th, td {
   padding: 10px;
-  background: #0a0d14;
-  border: 1px solid #334155;
-  color: white;
-  border-radius: 6px;
+  border: 1px solid #333;
+}
+
+.normal {
+  color: #00ff99;
+  font-weight: bold;
+}
+
+.attack {
+  color: red;
+  font-weight: bold;
 }
 
 button {
-  width: 100%;
-  margin-top: 15px;
-  padding: 12px;
+  padding: 10px;
   background: #0369a1;
   color: white;
   border: none;
-  border-radius: 8px;
-  font-weight: bold;
+  margin-top: 10px;
   cursor: pointer;
 }
 
 button:hover {
   background: #0284c7;
-}
-
-table {
-  width: 100%;
-  margin-top: 15px;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-
-th, td {
-  padding: 10px;
-  border-bottom: 1px solid #1e293b;
-  text-align: left;
-}
-
-th {
-  color: #64748b;
-  text-transform: uppercase;
-  font-size: 11px;
-}
-
-.normal {
-  color: #34d399;
-  font-weight: bold;
-}
-
-.attack {
-  color: #f87171;
-  font-weight: bold;
 }
